@@ -3,89 +3,64 @@ using System.IO;
 using System.Collections.Generic;
 using System.Linq;
 
+using Wire = System.Collections.Generic.List<AdventOfCode2019Day3.Point>;
+
 namespace AdventOfCode2019Day3
 {
-    struct Point
-    {
-        public Point(int x, int y)
-        {
-            X = x;
-            Y = y;
-        }
 
-        public int X { get; set; }
-        public int Y { get; set; }
-    }
     class Program
     {
-        private const int SIZE = 1000;
-
         static void Main(string[] args)
         {
-            int[,] grid = new int[SIZE, SIZE];
-            Point origin = new Point(8, 1);
-            DrawWires(ref grid, in origin);
-            Console.WriteLine($"Part 1: distance = {FindShortestIntersection(ref grid)}");
-        }
-
-        static int FindShortestIntersection(ref int[,] grid)
-        {
-            throw new NotImplementedException();
-        }
-
-        static void DrawWires(ref int[,] grid, in Point origin)
-        {
-            // Mark the central port with a -1
-            grid[origin.X, origin.Y] = -1;
-            Point currentLocation = new Point(origin.X, origin.Y);
-            // Read in the input
-            var wires = new List<List<string>>();
+            var wirePaths = new List<List<string>>();
             using (StreamReader sr = new StreamReader("input.txt"))
             {
                 string line;
                 while ((line = sr.ReadLine()) != null)
                 {
-                    wires.Add(line.Split(',').ToList());
+                    wirePaths.Add(line.Split(',').ToList());
                 }
             }
-            // mark the first wire's position with 1's
-            int wireNum = 1;
-            foreach (var wire in wires)
+
+            Point origin = new Point(0, 0);
+            var wires = new List<Wire>();
+
+            foreach (var wirePath in wirePaths)
             {
-                foreach (var path in wire)
+                var wire = new Wire();
+                wire.Add(origin);
+                foreach (var directive in wirePath)
                 {
-                    ParsePath(ref grid, ref currentLocation, wireNum, path);
+                    char direction = directive[0];
+                    if (Int32.TryParse(directive.Substring(1), out int distance))
+                    {
+                        Point currentPoint = wire[wire.Count - 1];
+                        foreach (var point in new PointSequence(currentPoint, direction, distance))
+                        {
+                            wire.Add(point);
+                        }
+
+                    }
+                    else
+                    {
+                        throw new ArgumentException("Invalid distance specified in input");
+                    }
                 }
+                wires.Add(wire);
             }
+            Console.WriteLine($"Part 1: distance = {FindShortestIntersection(in wires, origin)}");
         }
 
-        static void ParsePath(ref int[,] grid, ref Point currentLocation, int wireNum, string path)
+        static int FindShortestIntersection(in List<Wire> wires, Point origin)
         {
-            char direction = path[0];
-            if (Int32.TryParse(path.Substring(1), out int distance))
-            {
-                switch (direction)
-                {
-                    case 'U':
-                        // Y += distance
-                        break;
-                    case 'D':
-                        // Y -= distance
-                        break;
-                    case 'R':
-                        // X += distance
-                        break;
-                    case 'L':
-                        // X -= distance
-                        break;
-                    default:
-                        throw new ArgumentException($"Invalid direction {direction} in input");
-                }
-            }
-            else
-            {
-                throw new ArgumentException("Invalid distance specified in input");
-            }
+            var intersections = wires.Aggregate((previousWire, nextWire) => previousWire.Intersect(nextWire).ToList());
+            intersections.Remove(origin);
+            return intersections.Select(intersection => CalcTaxiCabDistance(origin, intersection)).Min();
+        }
+
+        static int CalcTaxiCabDistance(in Point point1, in Point point2)
+        {
+            return Math.Abs(point1.X - point2.X) + Math.Abs(point1.Y - point2.Y);
         }
     }
 }
