@@ -49,18 +49,48 @@ namespace AdventOfCode2019Day3
                 wires.Add(wire);
             }
             Console.WriteLine($"Part 1: distance = {FindShortestIntersection(in wires, origin)}");
+            Console.WriteLine($"Part 2: steps = {CalcFewestSteps(in wires, in origin)}");
         }
 
         static int FindShortestIntersection(in List<Wire> wires, Point origin)
         {
-            var intersections = wires.Aggregate((previousWire, nextWire) => previousWire.Intersect(nextWire).ToList());
-            intersections.Remove(origin);
-            return intersections.Select(intersection => CalcTaxiCabDistance(origin, intersection)).Min();
+            return FindIntersections(wires, origin).Select(intersection => CalcTaxiCabDistance(origin, intersection)).Min();
         }
 
         static int CalcTaxiCabDistance(in Point point1, in Point point2)
         {
             return Math.Abs(point1.X - point2.X) + Math.Abs(point1.Y - point2.Y);
+        }
+
+        static Wire FindIntersections(in List<Wire> wires, Point origin)
+        {
+            var intersections = wires.Aggregate((previousWire, nextWire) => previousWire.Intersect(nextWire).ToList());
+            intersections.Remove(origin);
+            return intersections;
+        }
+
+        static int CalcStepsToPoint(in Wire wire, Point point)
+        {
+            return wire.FindIndex((Point p) => p == point);
+        }
+
+        static int CalcFewestSteps(in List<Wire> wires, in Point origin)
+        {
+            var intersections = FindIntersections(in wires, origin);
+            var steps = new Dictionary<int, int>();
+
+            int index = 0;
+            foreach (var intersection in intersections)
+            {
+                foreach (var wire in wires)
+                {
+                    steps.TryGetValue(index, out int numSteps);
+                    steps[index] = numSteps + CalcStepsToPoint(in wire, intersection);
+                }
+                index++;
+            }
+
+            return steps.Select(numSteps => numSteps.Value).ToList().Min();
         }
     }
 }
